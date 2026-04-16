@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>신규 프랜차이즈 가맹점 확인</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css" />
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>신규 가맹점 확인</h1>
+        <div style="display: flex; align-items: center; column-gap: 1rem;">
+            <div style="flex-shrink: 0;">인허가일 ~부터:</div>
+            <input style="margin: 0 !important; max-width: 250px;" id="fromDate" type="date" />
+        </div>
+        <div style="display: flex; align-items: center; column-gap: 1rem;">
+            <div style="flex-shrink: 0;">인허가일 ~까지:</div>
+            <input style="margin: 0 !important; max-width: 250px;" id="toDate" type="date" />
+        </div>
+        <br />
+        <div style="display: flex; align-items: center; column-gap: 1rem;">
+            <button id="getStores">음식점 목록 확인</button>
+            <div>📢: <span id="msg">인허가일 입력 후, 왼쪽 "음식점 목록 확인" 버튼을 클릭하세요</span></div>
+        </div>
+    </header>
+    <main class="hidden">
+        <hr />
+        <button id="copyTable">아래 테이블을 클립보드로 복사</button>
+        <div style="width: 100%; overflow-x: auto;">
+            <table id="result"></table>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.20/dayjs.min.js"></script>
+    <script type="module">
+        // @ts-check
+        // 음식점 목록 확인 코드
+
+        import dayjs from "https://cdn.skypack.dev/pin/dayjs@v1.11.20-vobnFa3JiZEuF7RQG8va/mode=imports,min/optimized/dayjs.js";
+
+        const $getStores = /** @type { HTMLButtonElement } */ (document.getElementById("getStores"));
+        const $fromDate = /** @type { HTMLInputElement } */ (document.getElementById("fromDate"));
+        const $toDate = /** @type { HTMLInputElement } */ (document.getElementById("toDate"));
+        const $msg = /** @type { HTMLSpanElement } */ (document.getElementById("msg"));
+
+        const apiurl1 = `https://apis.data.go.kr/1741000/rest_cafes/info`;
+        const apiurl2 = `https://apis.data.go.kr/1741000/general_restaurants/info`;
+
+        /** @type { (page: number) => Promise<void> } */
+        async function fetchDate(page) {
+            if (!$fromDate.value || !$toDate.value) {
+                $msg.textContent = "인허가 날짜를 제대로 입력해야 합니다.";
+                return;
+            }
+            let diff = dayjs($toDate.value).diff($fromDate.value, "day"); 
+            if (diff > 366) {
+                $msg.textContent = "인허가 날짜 차이는 366일을 초과할 수 없습니다.";
+                return;
+            }
+            if (diff <= 0) {
+                $msg.textContent = "인허가 시작 날짜가 종료 날짜보다 작거나 같을 수는 없습니다.";
+                return;
+            }
+            
+
+            
+
+            // const params = {
+            //     serviceKey: `bULxrI/6yhWWqS44S0F3qc+uxnDKpzAJkQYzwWmri3eVaSBMSPujbdfT/yoeVq7IRgUPrpuImk1q7WRyRtNZbA==`,
+            //     numOfRows: "100",
+            //     ["cond[LCPMT_YMD::GTE]"]: $fromDate.value.replace("-", "");
+            //     ["cond[LCPMT_YMD::LT]"]:
+            // };
+        }
+        $getStores.addEventListener("click", async (e) => {
+            await fetchDate(1);
+        });
+
+
+
+        
+    </script>
+</body>
+</html>
