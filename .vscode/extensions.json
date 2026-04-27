@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "ritwickdey.liveserver",
-        "dvirtz.parquet-viewer"
+        "dvirtz.parquet-viewer",
+        "ms-python.python"
     ]
 }

@@ -8,8 +8,8 @@
     <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body style="padding: 0; margin: 0;">
-    <div class="layout" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0">
-        <div id="map" style="height: 100%; width: 100%;"></div>
+    <div class="layout" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: auto;">
+        <div id="map" style="height: 800px; width: 800px; background-color: #fff !important;"></div>
     </div>
     
     <script type="module">
@@ -18,17 +18,57 @@
 
         import * as L from "https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js";
 
-        const map = L.map("map").setView([37.5665, 126.9780], 13);
+        // 맵 초기화
+        const map = L.map("map").setView([37.5665, 126.9780], 7);
         async function loadData() {
-            const response = await fetch('HangJeongDong_ver20260401.geojson');
-            const data = await response.json();
-            
-            L.geoJSON(data, {
-                style: { color: 'black', weight: 1 }
+            const [sidoF, sggF, emdF] = await Promise.all([
+                fetch("sido_ver20260401.geojson"),
+                fetch("sgg_ver20260401.geojson"),
+                fetch("emd_ver20260401.geojson"),
+            ]);
+            const [sido, sgg, emd] = await Promise.all([
+                sidoF.json(),
+                sggF.json(),
+                emdF.json(),
+            ]);
+
+            const highlightStyle = { color: "#ccc", fillColor: "#fb0", weight: 1 };
+            const defaultStyle = { color: "#ccc", fillColor: "#fff", weight: 1 };
+
+            L.geoJSON(sido, {
+                style: { color: "#000", fillColor: "transparent", weight: 3 }
             }).addTo(map);
+            L.geoJSON(sgg, {
+                style: { color: "#666", fillColor: "transparent", weight: 2 }
+            }).addTo(map);
+            L.geoJSON(emd, {
+                style: { color: "#ccc", fillColor: "#fff", weight: 1 },
+                onEachFeature: function(feature, layer) {
+                    layer.on("mouseover", (e) => {
+                        console.log("mouseon!!!");
+
+                        const target = e.target;
+                        target.setStyle(highlightStyle);
+                        const name = feature.properties.adm_nm || "미확인 지역";
+                        layer.bindTooltip(name, { 
+                            sticky: true, // 마우스를 따라다님
+                            direction: 'top' 
+                        }).openTooltip();
+                    });
+                    layer.on("mouseout", (e) => {
+                        const target = e.target;
+                        target.setStyle(defaultStyle); // 원래 스타일로 초기화
+                        layer.closeTooltip(); // 툴팁 닫기
+                    });
+                },
+            }).addTo(map);
+            
         }
         loadData();
 
+
+        // 하이라이트
+        
     </script>
 </body>
 </html>
