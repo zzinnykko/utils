@@ -5,21 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>마켓맵</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .leaflet-interactive {
+            outline: none;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
 </head>
 <body style="padding: 0; margin: 0;">
+    
     <div class="layout" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: auto;">
+        <input type="file" id="db-input" accept=".db, .sqlite, .sqlite3" />
         <div id="map" style="height: 800px; width: 800px; background-color: #fff !important;"></div>
     </div>
-    
-    <script type="module">
-        // @ts-check
-        /// <reference lib="esnext" />
 
-        import * as L from "https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js";
+    <script>
+        // 변수
+        const DISPLAY_MARKER_AT_ZOOM = 13;
 
         // 맵 초기화
-        const map = L.map("map").setView([37.5665, 126.9780], 7);
+        const map = L.map("map", {
+            center: [36.0, 127.0],
+            zoom: 7, 
+            maxZoom: 13,
+            minZoom: 7,
+        });
+        const markerLayer = L.layerGroup().addTo(map);
         async function loadData() {
             const [sidoF, sggF, emdF] = await Promise.all([
                 fetch("sido_ver20260401.geojson"),
@@ -45,8 +57,6 @@
                 style: { color: "#ccc", fillColor: "#fff", weight: 1 },
                 onEachFeature: function(feature, layer) {
                     layer.on("mouseover", (e) => {
-                        console.log("mouseon!!!");
-
                         const target = e.target;
                         target.setStyle(highlightStyle);
                         const name = feature.properties.adm_nm || "미확인 지역";
@@ -62,13 +72,105 @@
                     });
                 },
             }).addTo(map);
+
+            // 줌 변경 감지
+            map.on("zoomend", () => {
+                const curZoom = map.getZoom();
+                if (curZoom < DISPLAY_MARKER_AT_ZOOM) {
+                    markerLayer.clearLayers();
+                }
+
+                console.log(`current zoom level: ${ map.getZoom() }`);
+            });
             
         }
         loadData();
-
-
-        // 하이라이트
         
+
+        // db 로드
+        const $db = document.getElementById("db-input");
+        let db = null;
+        $db.onchange = async(e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const buffer = await file.arrayBuffer();
+
+            // sql 설정
+            const sql = await initSqlJs({
+                locateFile: (filename) => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${filename}`,
+            });
+            db = new sql.Database(new Uint8Array(buffer));
+            console.log("db loading complete:", db);
+        };
+
+
+        // sql 쿼리
+        
+        let debounce;
+        map.on("moveend", () => {
+            // 디바운스
+            clearTimeout(debounce);
+            debounce = setTimeout(() => {
+
+                // 줌레벨 제한
+                if (map.getZoom() < DISPLAY_MARKER_AT_ZOOM) return;
+
+                // db 로드 여부 확인
+                if (!db) return;
+
+                // 지도 경계
+                const bounds = map.getBounds();
+                const minLat = bounds.getSouth();
+                const maxLat = bounds.getNorth();
+                const minLng = bounds.getWest();
+                const maxLng = bounds.getEast();
+
+                // 쿼리
+                const query = `
+                    SELECT * FROM marketmap
+                    WHERE 경도 BETWEEN ${ minLng } AND ${ maxLng }
+                    AND 위도 BETWEEN ${ minLat } AND ${ maxLat }
+                `;
+                try {
+                    const res = db.exec(query);
+                    // console.log(res);
+                    if (res.length > 0) {
+                        updateMarkers(res[0].values, res[0].columns);
+                    }
+                } catch (err) {
+                    console.error(`쿼리 실행 오류:`, err)
+                }
+
+            }, 300);    // debounce
+
+            
+        });
+
+
+        // 마킹
+        function updateMarkers(data, columns) {
+            markerLayer.clearLayers(); // 이전 마커 삭제
+
+            const lngIdx = columns.indexOf("경도");
+            const latIdx = columns.indexOf("위도");
+
+            data.forEach(row => {
+                const lng = row[lngIdx];
+                const lat = row[latIdx];
+
+                // L.marker([lat, lng]).addTo(markerLayer);
+                L.circleMarker([lat, lng], {
+                    radius: 2,             // 원의 크기
+                    fillColor: "#ff0000",  // 붉은색 채우기
+                    color: "#ff0000",      // 테두리 색상
+                    weight: 1,             // 테두리 두께
+                    opacity: 1,            // 테두리 투명도
+                    fillOpacity: 0.5       // 반투명도 (0.5는 50% 투명)
+                }).addTo(markerLayer);
+            });
+        }
+
     </script>
 </body>
 </html>
