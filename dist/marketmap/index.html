@@ -22,7 +22,7 @@
 
     <script>
         // 변수
-        const DISPLAY_MARKER_AT_ZOOM = 13;
+        const DISPLAY_MARKER_AT_ZOOM = 11;
 
         // 맵 초기화
         const map = L.map("map", {
@@ -56,6 +56,9 @@
             L.geoJSON(emd, {
                 style: { color: "#ccc", fillColor: "#fff", weight: 1 },
                 onEachFeature: function(feature, layer) {
+                    
+
+
                     layer.on("mouseover", (e) => {
                         const target = e.target;
                         target.setStyle(highlightStyle);
